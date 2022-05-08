@@ -1,0 +1,4 @@
+scores/*
+!scores/.gitkeep
+
+__pycache__

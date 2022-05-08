@@ -1,0 +1,4 @@
+scores/*
+!scores/.gitkeep
+data
+knn
