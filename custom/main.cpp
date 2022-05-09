@@ -14,7 +14,6 @@
 #include <future>
 
 #include "dataset.cpp"
-// #include "multithread.h"
 #include "results.cpp"
 
 using namespace std;
@@ -82,14 +81,11 @@ short choose_from_predictions(const vector<prediction_item> &list)
     return res;
 }
 
-short predict(dataset train_set, const matrix &matrix_to_test, unsigned short int neighbors)
+short predict(dataset train_set, const matrix &matrix_to_test, unsigned short int neighbors, unsigned short nbOfThread)
 {
     cout << "Predicting... ";
-    vector<prediction_item> list(neighbors);
-    int nbOfThread = 2;
-    int slice = ceil(train_set.imgs.size() / nbOfThread);
-    // vector<thread> threads;
     vector<future<vector<prediction_item>>> futures;
+    int slice = ceil(train_set.imgs.size() / nbOfThread);
     for (int k = 0; k < nbOfThread; k++)
     {
         int min = slice * k;
@@ -116,10 +112,10 @@ short predict(dataset train_set, const matrix &matrix_to_test, unsigned short in
         };
         futures.push_back(async(func));
     }
+    vector<prediction_item> list(neighbors);
     for (future<vector<prediction_item>> &f : futures)
     {
         vector<prediction_item> future_list = f.get();
-        // cout << lists.back().size() << endl;
         for (int i = 0; i < neighbors; i++)
         {
             if (list[i].distance > future_list[i].distance)
@@ -131,31 +127,20 @@ short predict(dataset train_set, const matrix &matrix_to_test, unsigned short in
         }
     }
 
-    // for (int l = 0; l < train_set.imgs.size(); l++)
-    // {
-    //     const matrix &D = train_set.imgs[l];
-    //     dist d = euclidian_distance(D, matrix_to_test);
-    //     for (unsigned short int i = 0; i < neighbors; i++)
-    //     {
-    //         if (list[i].distance > d)
-    //         {
-    //             prediction_item p(train_set.labels[l], d);
-    //             list.insert(begin(list) + i, p);
-    //             list.pop_back();
-    //             break;
-    //         }
-    //     }
-    // }
-
     return choose_from_predictions(list);
 }
 
 int main(int argc, char **argv)
 {
     int neighbors = 5;
+    unsigned short nbOfThreads = 2;
     if (argc > 1)
     {
         neighbors = stoi(argv[1]);
+    }
+    if (argc > 2)
+    {
+        nbOfThreads = stoi(argv[2]);
     }
     cout << "Starting" << endl;
 
@@ -172,7 +157,7 @@ int main(int argc, char **argv)
     {
         matrix k = test_set.imgs[i];
         cout << "Test n°" << (errors + success) << " expecting " << +test_set.labels[i] << "." << endl;
-        short result = predict(train_set, k, neighbors);
+        short result = predict(train_set, k, neighbors, nbOfThreads);
         save.push(result, +test_set.labels[i]);
         if (result == +test_set.labels[i])
         {
