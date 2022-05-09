@@ -10,7 +10,7 @@
 #include <future>
 
 #include "dataset.cpp"
-// #include "result.cpp"
+#include "results.cpp"
 
 using namespace std;
 
@@ -39,7 +39,7 @@ dist euclidian_distance(const matrix &A, const matrix &B)
     {
         k += pow((A[i] - B[i]), 2);
     }
-    return k;
+    return sqrt(k);
 }
 
 short choose_from_predictions(const vector<prediction_item> &list)
@@ -115,16 +115,7 @@ int main(int argc, char **argv)
     cout << "Loading Test _Dataset _________________________" << endl;
     dataset test_set = load(true);
 
-    // for (int g = 0; g < 100; g++)
-    // {
-    //     for(int g___ = 0; g___ < 784; g___++){
-    //         cout << setfill('0') << setw(2) << hex << +test_set.imgs[g][g___];
-    //         if((g___ %28) == 0) cout << endl;
-    //     }
-    //     cout << "label : " << +test_set.labels[g] << endl;
-    //     char g_;
-    //     cin >> g_;
-    // }
+    Save save("scores", neighbors, "distance");
 
     int errors(0);
     int success(0);
@@ -133,7 +124,8 @@ int main(int argc, char **argv)
         matrix k = test_set.imgs[i];
         cout << "Test n°" << (errors + success) << " expecting " << +test_set.labels[i] << "." << endl;
         short result = predict(train_set, k, neighbors);
-        if (+result == +test_set.labels[i])
+        save.push(result, +test_set.labels[i]);
+        if (result == +test_set.labels[i])
         {
             success++;
         }
@@ -141,11 +133,11 @@ int main(int argc, char **argv)
         {
             errors++;
         }
-        cout << "Success rate : " << (success * 100 / (success + errors)) << "%" << endl;
+        cout << "Success rate : " << double(success * 100 / (success + errors)) << "%" << endl;
     }
-
+    save.close();
     cout << success << " success and " << errors << " errors" << endl;
-    cout << "Success rate : " << (success * 100 / (success + errors)) << "%" << endl;
+    cout << "Success rate : " << double(success * 100 / (success + errors)) << "%" << endl;
 
     return 0;
 }
