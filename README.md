@@ -13,6 +13,6 @@ py main.py
 ```shell
 cd custom
 sh _prepare.sh # unzip dataset and move it to a `data`directory
-g++ main.cpp --std=c++20 -o knn # compile the c++ code
+g++ main.cpp --std=c++20 -lpthread -o knn # compile the c++ code
 ./knn 3 2 # execution
 ```
