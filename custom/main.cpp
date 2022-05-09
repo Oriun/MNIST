@@ -8,8 +8,13 @@
 #include <map>
 #include <thread>
 #include <future>
+#include <thread>
+#include <algorithm>
+#include <functional>
+#include <future>
 
 #include "dataset.cpp"
+// #include "multithread.h"
 #include "results.cpp"
 
 using namespace std;
@@ -81,22 +86,66 @@ short predict(dataset train_set, const matrix &matrix_to_test, unsigned short in
 {
     cout << "Predicting... ";
     vector<prediction_item> list(neighbors);
-
-    for (int l = 0; l < train_set.imgs.size(); l++)
+    int nbOfThread = 2;
+    int slice = ceil(train_set.imgs.size() / nbOfThread);
+    // vector<thread> threads;
+    vector<future<vector<prediction_item>>> futures;
+    for (int k = 0; k < nbOfThread; k++)
     {
-        const matrix &D = train_set.imgs[l];
-        dist d = euclidian_distance(D, matrix_to_test);
-        for (unsigned short int i = 0; i < neighbors; i++)
+        int min = slice * k;
+        int m = k;
+        int max = std::max(int(train_set.imgs.size()), slice * (k + 1));
+        auto func = [&]()
         {
-            if (list[i].distance > d)
+            vector<prediction_item> list(neighbors);
+            for (int l = min; l < max; l++)
             {
-                prediction_item p(train_set.labels[l], d);
-                list.insert(begin(list) + i, p);
+                const matrix &D = train_set.imgs[l];
+                dist d = euclidian_distance(D, matrix_to_test);
+                for (unsigned short int i = 0; i < neighbors; i++)
+                {
+                    if (list[i].distance > d)
+                    {
+                        list.insert(begin(list) + i, prediction_item(train_set.labels[l], d));
+                        list.pop_back();
+                        break;
+                    }
+                }
+            }
+            return list;
+        };
+        futures.push_back(async(func));
+    }
+    for (future<vector<prediction_item>> &f : futures)
+    {
+        vector<prediction_item> future_list = f.get();
+        // cout << lists.back().size() << endl;
+        for (int i = 0; i < neighbors; i++)
+        {
+            if (list[i].distance > future_list[i].distance)
+            {
+                list.insert(begin(list) + i, future_list[i]);
                 list.pop_back();
                 break;
             }
         }
     }
+
+    // for (int l = 0; l < train_set.imgs.size(); l++)
+    // {
+    //     const matrix &D = train_set.imgs[l];
+    //     dist d = euclidian_distance(D, matrix_to_test);
+    //     for (unsigned short int i = 0; i < neighbors; i++)
+    //     {
+    //         if (list[i].distance > d)
+    //         {
+    //             prediction_item p(train_set.labels[l], d);
+    //             list.insert(begin(list) + i, p);
+    //             list.pop_back();
+    //             break;
+    //         }
+    //     }
+    // }
 
     return choose_from_predictions(list);
 }
